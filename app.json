@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "AGExpense",
+    "slug": "AGExpense",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  },
+  "name": "AGExpense"
+}
