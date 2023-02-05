@@ -2,6 +2,9 @@
 #
 .DS_Store
 
+#custom
+src/database/configDB.js
+
 # Xcode
 #
 build/

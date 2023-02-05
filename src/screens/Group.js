@@ -1,34 +1,42 @@
-import { View, Text, StyleSheet, Pressable, TouchableOpacity, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+} from "react-native";
 import React, { useEffect, useState } from "react";
-import { Button, Card,  Dialog, Input } from "@rneui/themed";
+import { Button, Card, Dialog, Input } from "@rneui/themed";
 import { FlatList } from "react-native";
 import { now } from "moment";
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker from "@react-native-community/datetimepicker";
 import firebase from "../database/configDB";
 import CheckBoxStack from "../components/CheckBoxStack";
 import { screens } from ".";
+import processGroupTransaction from "../common.js/processGroupTransaction";
+import SelectDropdown from "react-native-select-dropdown";
 
 const Group = ({ navigation, route }) => {
-  const {group} = route.params;
+  const { group } = route.params;
   const [modal, setModal] = useState(false);
   const [modalTransaction, setModalTransaction] = useState(false);
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
   const [date, setDate] = useState(new Date());
   const [amount, setAmount] = useState();
+  const [paidBy, setPaidBy] = useState();
   const [loadGroup, setLoadGroup] = useState(false);
   const [remarks, setRemarks] = useState();
   const [transactionUser, setTransactionUser] = useState({});
   const [currentUser, setCurrentUser] = useState();
   const [groupUser, setGroupUser] = useState([]);
   const [groupTransaction, setGroupTransaction] = useState([]);
+  const [groupRecord, setGroupRecord] = useState({});
   const [inputName, setInputName] = useState();
   const groupRef = firebase.firestore().collection("groups");
 
   const handleAddNewUser = () => {
     setModal((pre) => !pre);
-  };
-  const handleGroupUser = () => {
-
   };
 
   // useEffect(() => {
@@ -48,41 +56,38 @@ const Group = ({ navigation, route }) => {
   // },[]);
 
   const handleDatePicker = () => {
-    setShowDateTimePicker(true)
+    setShowDateTimePicker(true);
   };
   const handleTransaction = () => {
-    setModalTransaction(prev => !prev)
+    setModalTransaction((prev) => !prev);
   };
 
-  
-  const handleDateChange = (e,date) => {
+  const handleDateChange = (e, date) => {
     setDate(date);
-    setShowDateTimePicker(false)
-  }
+    setShowDateTimePicker(false);
+  };
   const handleNewTransaction = () => {
-    console.log(
-      "idf ",
-      group.id,
-      "amt",
-      amount,
-      "ln",
-      Object.keys(transactionUser).length
-    );
     if (group.id && amount && Object.keys(transactionUser).length) {
+      const trueInvolvedUsers = Object.entries(transactionUser).filter(
+        (entry) => entry[1] === true
+      );
+      const involvedUsers = Object.fromEntries(trueInvolvedUsers);
+      let totalUserInTransaction = trueInvolvedUsers?.length;
+
       groupRef
         .doc(group?.id)
         .update({
           transactions: firebase.firestore.FieldValue.arrayUnion({
             amount: amount,
             remarks,
-            paid_by: "",
-            users: transactionUser,
+            paid_by: paidBy || currentUser?.name || "self",
+            users: involvedUsers,
+            totalUserInTransaction,
             at: date,
           }),
         })
         .then((v) => {
-          setLoadGroup(true)
-          Alert.alert("Transaction added");
+          setLoadGroup(true);
         })
         .catch((err) => {
           Alert.alert(err.message);
@@ -91,7 +96,6 @@ const Group = ({ navigation, route }) => {
     setModalTransaction((prev) => false);
   };
 
- 
   const handleAddUserToGroup = () => {
     if (group.id && inputName) {
       groupRef
@@ -102,7 +106,7 @@ const Group = ({ navigation, route }) => {
           }),
         })
         .then((v) => {
-          setLoadGroup(true)
+          setLoadGroup(true);
           Alert.alert("User added");
         })
         .catch((err) => {
@@ -112,33 +116,81 @@ const Group = ({ navigation, route }) => {
     setModal(false);
   };
 
-  useEffect(()=>{
-    const user = firebase.auth().currentUser;
-    if(user?.uid && user?.uid != ""){
-      setCurrentUser(user);
-    }else{
-      navigation.navigate(screens.LOGIN)
-    }
-  },[])
+  const convertToCheckboxData = (data) => {
+    let convertedData = data?.reduce((acc, curr) => {
+      let obj = {
+        title: curr.name,
+        key: curr.name.toLowerCase(),
+      };
+      acc.push(obj);
+      return acc;
+    }, []);
 
-  useEffect(()=>{
-    setGroupTransaction(group.transaction ||group.transactions || [])
-    setGroupUser(group.users || [])
-  },[])
+    return convertedData;
+  };
+  const convertToSelectData = (data) => {
+    let convertedData = data?.reduce((acc, curr) => {
+      acc.push(curr.name.toLowerCase());
+      return acc;
+    }, []);
+
+    return convertedData;
+  };
+
+  const payOrPaidString = (totalExpense = 0, totalPaid = 0) => {
+    let balance = totalExpense - totalPaid;
+    return balance > 0
+      ? `have to pay Rs ${balance.toFixed(2)}`
+      : balance != 0
+      ? `have to take ${(balance * -1).toFixed(2)}`
+      : "";
+  };
+
+  useEffect(() => {
+    const user = firebase.auth().currentUser;
+    if (user?.uid && user?.uid != "") {
+      setCurrentUser(user);
+    } else {
+      navigation.navigate(screens.LOGIN);
+    }
+  }, []);
+
+  useEffect(() => {
+    setGroupTransaction(group.transaction || group.transactions || []);
+    setGroupUser(group.users || []);
+    console.log("group record", processGroupTransaction({ group }));
+  }, []);
   useEffect(() => {
     groupRef.doc(group.id).onSnapshot((documentSnapshot) => {
       if (documentSnapshot.exists) {
         const data = documentSnapshot.data();
-        setGroupUser(data?.users)
-        setGroupTransaction(data?.transactions || data?.transaction)
+        setGroupUser(data?.users);
+        setGroupTransaction(data?.transactions || data?.transaction);
       } else {
         console.log("group not found");
       }
     });
+    setGroupRecord(processGroupTransaction({ group }));
   }, [loadGroup]);
 
   return (
+    // <ScrollView>
     <View style={[styles.container]}>
+      <Card>
+        <Card.Title style={{ alignContent: "space-between" }}>
+          <Text style={{ flex: 4 }}>{group.name}</Text>
+        </Card.Title>
+        <Card.Divider />
+        <Text>Total Transaction Amount: {groupRecord?.totalSpend || 0}</Text>
+        {groupRecord?.users?.map((record) => (
+          <Text>
+            {record?.name || `User ${i + 1}`} - Expense:{" "}
+            {record?.totalExpense || 0}Rs Paid: {record?.totalPaid || 0}
+            {payOrPaidString(record?.totalExpense, record?.totalPaid)}
+          </Text>
+        ))}
+      </Card>
+
       <Card>
         <Card.Title style={{ alignContent: "space-between" }}>
           <Text style={{ flex: 4 }}>Users</Text>
@@ -170,7 +222,7 @@ const Group = ({ navigation, route }) => {
           <FlatList
             data={groupTransaction}
             renderItem={({ item }) => (
-              <View style={[styles.container, styles.row]}>
+              <View key={item?.id} style={[styles.container, styles.row]}>
                 <View style={{ flex: 3 }}>
                   <Text>{item.remarks || ""}</Text>
                 </View>
@@ -211,6 +263,7 @@ const Group = ({ navigation, route }) => {
           }}
         >
           <Dialog.Title title="Add New Transaction" />
+
           <View>
             <Text>Amount</Text>
             <Input
@@ -227,6 +280,26 @@ const Group = ({ navigation, route }) => {
               errorMessage={false && "ENTER A VALID ERROR HERE"}
               onChangeText={setRemarks}
             />
+
+            <Text>Paid By</Text>
+            <SelectDropdown
+              data={convertToSelectData(groupUser)}
+              onSelect={(selectedItem, index) => {
+                console.log(selectedItem, index);
+                setPaidBy(selectedItem);
+              }}
+              buttonTextAfterSelection={(selectedItem, index) => {
+                // text represented after item is selected
+                // if data array is an array of objects then return selectedItem.property to render after item is selected
+                return selectedItem;
+              }}
+              rowTextForSelection={(item, index) => {
+                // text represented for each item in dropdown
+                // if data array is an array of objects then return item.property to represent item in dropdown
+
+                return item;
+              }}
+            />
             <Text>Transaction Date</Text>
             <TouchableOpacity onPress={handleDatePicker}>
               <Text>
@@ -234,13 +307,12 @@ const Group = ({ navigation, route }) => {
               </Text>
             </TouchableOpacity>
           </View>
-          <CheckBoxStack
-          onChange={setTransactionUser}
-            options={[
-              { title: "Abhishek", key: "abhishek" },
-              { title: "Abhishek Dhull", key: "abhishek dhull" },
-            ]}
-          />
+          <ScrollView style={{ maxHeight: 216 }}>
+            <CheckBoxStack
+              onChange={setTransactionUser}
+              options={convertToCheckboxData(groupUser)}
+            />
+          </ScrollView>
           <View>
             <Button onPress={handleNewTransaction}>Create</Button>
           </View>
@@ -250,6 +322,7 @@ const Group = ({ navigation, route }) => {
         <DateTimePicker value={date} onChange={handleDateChange} />
       )}
     </View>
+    // </ScrollView>
   );
 };
 
