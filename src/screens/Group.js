@@ -107,7 +107,6 @@ const Group = ({ navigation, route }) => {
         })
         .then((v) => {
           setLoadGroup(true);
-          Alert.alert("User added");
         })
         .catch((err) => {
           Alert.alert(err.message);
@@ -140,10 +139,10 @@ const Group = ({ navigation, route }) => {
   const payOrPaidString = (totalExpense = 0, totalPaid = 0) => {
     let balance = totalExpense - totalPaid;
     return balance > 0
-      ? `have to pay Rs ${balance.toFixed(2)}`
+      ? ` have to pay Rs ${balance.toFixed(2)}`
       : balance != 0
-      ? `have to take ${(balance * -1).toFixed(2)}`
-      : "";
+      ? ` have to take ${(balance * -1).toFixed(2)}`
+      : " ";
   };
 
   useEffect(() => {
@@ -158,21 +157,28 @@ const Group = ({ navigation, route }) => {
   useEffect(() => {
     setGroupTransaction(group.transaction || group.transactions || []);
     setGroupUser(group.users || []);
-    console.log("group record", processGroupTransaction({ group }));
   }, []);
+
+
   useEffect(() => {
     groupRef.doc(group.id).onSnapshot((documentSnapshot) => {
       if (documentSnapshot.exists) {
         const data = documentSnapshot.data();
         setGroupUser(data?.users);
         setGroupTransaction(data?.transactions || data?.transaction);
+        const groupTransactionRecord = processGroupTransaction({ group:data });
+        console.log("group transaction loaded...",groupTransactionRecord)
+        setGroupRecord(groupTransactionRecord);
       } else {
         console.log("group not found");
       }
     });
-    setGroupRecord(processGroupTransaction({ group }));
   }, [loadGroup]);
 
+  // useEffect(()=>{
+
+
+  // },[groupUser,groupTransaction])
   return (
     // <ScrollView>
     <View style={[styles.container]}>
@@ -183,11 +189,11 @@ const Group = ({ navigation, route }) => {
         <Card.Divider />
         <Text>Total Transaction Amount: {groupRecord?.totalSpend || 0}</Text>
         {groupRecord?.users?.map((record) => (
-          <Text>
-            {record?.name || `User ${i + 1}`} - Expense:{" "}
-            {record?.totalExpense || 0}Rs Paid: {record?.totalPaid || 0}
-            {payOrPaidString(record?.totalExpense, record?.totalPaid)}
-          </Text>
+          <View>
+           <Text>{record?.name || `User ${i + 1}`} {payOrPaidString(record?.totalExpense, record?.totalPaid)} </Text> 
+            <Text>Rs Paid: {record?.totalPaid || 0}</Text>
+            <Text>Expense:{" "} {record?.totalExpense || 0}</Text>
+          </View>
         ))}
       </Card>
 

@@ -2,6 +2,7 @@ import { View, Text } from "react-native";
 import React, { useEffect } from "react";
 
 const processGroupTransaction = ({ group }) => {
+  console.log("processGroupTransaction,")
   let groupRecord = { syncAt: new Date() };
   if (group && group.transactions) {
     let total = 0;
@@ -13,7 +14,7 @@ const processGroupTransaction = ({ group }) => {
 
       groupUsers = group?.users?.map((groupUser) => {
         let totalExpense = 0;
-        let totalPaid = parseInt(transaction?.amount);
+        let totalPaid = 0;
         // console.log("Group User",(groupUser?.name).toLowerCase() )
         if ((groupUser?.name).toLowerCase() === (transaction?.paid_by).toLowerCase()) {
           // console.log("transaction?.paid_by User",(transaction?.paid_by).toLowerCase() )
@@ -21,21 +22,21 @@ const processGroupTransaction = ({ group }) => {
           userTotalPaid.forEach((paidUser, i) => {
             // console.log("paidUser",paidUser)
             if (paidUser?.name == groupUser?.name) {
-              totalPaid += paidUser?.totalPaid || 0;
+              totalPaid = parseInt(transaction?.amount || 0) +  parseInt(paidUser?.totalPaid || 0);
               userTotalPaid[i].totalPaid = totalPaid;
               isUserExistInUserTotalPaid = true;
             } 
           });
           if (!isUserExistInUserTotalPaid) {
             // console.log("false");
-            totalPaid = userTotalPaid.push({
+            totalPaid = parseInt(transaction?.amount || 0);
+            userTotalPaid.push({
               name: groupUser?.name,
               totalPaid,
             });
           }
-          // console.log("Total paid ",(totalPaid || 0).toFixed(2))
-
           groupUser.totalPaid = (totalPaid || 0).toFixed(2);
+          // console.log("Total paid ",(totalPaid || 0).toFixed(2))
         }
 
         //if current user involve in transaction
