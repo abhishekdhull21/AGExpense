@@ -55,8 +55,12 @@ const [groupDescription, setGroupDescription] = useState("")
       });
       setGroups(arr)
     });
-    return () => unsubscribe() // cleanup function to detach the listener when component unmounts.
+    return () => unsubscribe() 
   }, []);
+
+
+    // processGroupTransaction()
+
   const handleCreateGroupModal = ()=>{
     setCreateGroupModal((prev) => true)
   }
@@ -66,7 +70,7 @@ const [groupDescription, setGroupDescription] = useState("")
       <Button onPress={handleCreateGroupModal} >Create Group</Button>
       <FlatList
         data={groups}
-        renderItem={({ item }) => <Item onPress={()=>{navigation.navigate(screens.GROUP,{group:item})}} title={item.name} />}
+        renderItem={({ item }) => <Item key={item.id} onPress={()=>{navigation.navigate(screens.GROUP,{group:item})}} title={item.name} />}
         keyExtractor={(item) => item.id}
       />
       {createGroupModal && 

@@ -31,7 +31,7 @@ const processGroupTransaction = ({ group }) => {
             // console.log("false");
             totalPaid = parseInt(transaction?.amount || 0);
             userTotalPaid.push({
-              name: groupUser?.name,
+              name: groupUser?.name?.toLowerCase(),
               totalPaid,
             });
           }
@@ -40,7 +40,7 @@ const processGroupTransaction = ({ group }) => {
         }
 
         //if current user involve in transaction
-        if (transaction?.users[(groupUser?.name).toLowerCase()]) {
+        if (transaction?.users[(groupUser?.name?.toLowerCase()).toLowerCase()]) {
           totalExpense =
             transaction?.amount / (transaction?.totalUserInTransaction || 1);
           let isUserExistInUserExpense = false;
@@ -52,7 +52,7 @@ const processGroupTransaction = ({ group }) => {
             }
           });
           if (!isUserExistInUserExpense) {
-            userExpense.push({ name: groupUser?.name, totalExpense });
+            userExpense.push({ name: groupUser?.name?.toLowerCase(), totalExpense });
           }
           groupUser.totalExpense = totalExpense.toFixed(2);
         }

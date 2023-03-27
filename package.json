@@ -31,6 +31,7 @@
     "react-native-select-dropdown": "^3.2.1",
     "react-native-vector-icons": "^9.2.0",
     "react-native-web": "^0.18.10",
+    "twrnc": "^3.6.0",
     "yarn": "^1.22.19"
   },
   "devDependencies": {

@@ -33,7 +33,7 @@ export default Login = ({navigation}) => {
     }
   },[])
   return (
-    <View style={styles.container}>
+    <View  style={styles.container}>
 
       {loading &&
         <View style={styles.preloader}>

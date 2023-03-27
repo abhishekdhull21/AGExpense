@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  VirtualizedList,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { Button, Card, Dialog, Input } from "@rneui/themed";
@@ -16,6 +17,8 @@ import CheckBoxStack from "../components/CheckBoxStack";
 import { screens } from ".";
 import processGroupTransaction from "../common.js/processGroupTransaction";
 import SelectDropdown from "react-native-select-dropdown";
+import tw from 'twrnc';
+import { groupCalculation } from "../common.js/groupCalculation";
 
 const Group = ({ navigation, route }) => {
   const { group } = route.params;
@@ -33,6 +36,7 @@ const Group = ({ navigation, route }) => {
   const [groupTransaction, setGroupTransaction] = useState([]);
   const [groupRecord, setGroupRecord] = useState({});
   const [inputName, setInputName] = useState();
+  const [groupExpense, setGroupExpense] = useState({});
   const groupRef = firebase.firestore().collection("groups");
 
   const handleAddNewUser = () => {
@@ -157,6 +161,8 @@ const Group = ({ navigation, route }) => {
   useEffect(() => {
     setGroupTransaction(group.transaction || group.transactions || []);
     setGroupUser(group.users || []);
+    // console.log("group calculation ",groupCalculation(group))
+    setGroupExpense(groupCalculation(group))
   }, []);
 
 
@@ -166,169 +172,226 @@ const Group = ({ navigation, route }) => {
         const data = documentSnapshot.data();
         setGroupUser(data?.users);
         setGroupTransaction(data?.transactions || data?.transaction);
-        const groupTransactionRecord = processGroupTransaction({ group:data });
-        console.log("group transaction loaded...",groupTransactionRecord)
+        const groupTransactionRecord = processGroupTransaction({ group: data });
+        // console.log("group transaction loaded...", groupTransactionRecord);
         setGroupRecord(groupTransactionRecord);
       } else {
         console.log("group not found");
       }
     });
+
   }, [loadGroup]);
 
   // useEffect(()=>{
 
 
   // },[groupUser,groupTransaction])
-  return (
-    // <ScrollView>
-    <View style={[styles.container]}>
-      <Card>
-        <Card.Title style={{ alignContent: "space-between" }}>
-          <Text style={{ flex: 4 }}>{group.name}</Text>
-        </Card.Title>
-        <Card.Divider />
-        <Text>Total Transaction Amount: {groupRecord?.totalSpend || 0}</Text>
-        {groupRecord?.users?.map((record) => (
-          <View>
-           <Text>{record?.name || `User ${i + 1}`} {payOrPaidString(record?.totalExpense, record?.totalPaid)} </Text> 
-            <Text>Rs Paid: {record?.totalPaid || 0}</Text>
-            <Text>Expense:{" "} {record?.totalExpense || 0}</Text>
-          </View>
-        ))}
-      </Card>
 
-      <Card>
-        <Card.Title style={{ alignContent: "space-between" }}>
-          <Text style={{ flex: 4 }}>Users</Text>
-          <Button onPress={handleAddNewUser} style={{ flex: 1 }}>
-            Add New
-          </Button>
-        </Card.Title>
-        <Card.Divider />
-        <FlatList
-          data={groupUser}
-          renderItem={({ item }) => (
-            <View style={[styles.container, styles.row]}>
-              <View style={{ flex: 3 }}>
-                <Text>{item.name}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text>{item.amount || 0}</Text>
-              </View>
+  useEffect(()=>{
+    groupRecord?.users?.forEach((record,i)=>{
+      const balance = record?.totalExpense - record?.totalPaid;
+      
+      // console.log("record=>",record)
+    })
+    // console.log('group info', JSON.stringify(group, null, 2))
+  },[loadGroup])
+
+  return (
+    <ScrollView>
+      <View style={[styles.container]}>
+        <Card>
+          <Card.Title style={{ alignContent: "space-between" }}>
+            <Text style={{ flex: 4 }}>{group.name}</Text>
+          </Card.Title>
+          <Card.Divider />
+          <Text>Total Transaction Amount: {groupRecord?.totalSpend || 0}</Text>
+          {/* {console.log("groupExpense",groupExpense)} */}
+          {Object.keys(groupExpense || {}).map((user) => (
+            <View>
+              <Text>
+                   {user || `User ${ 1}`}{" => "}
+                   {/* {payOrPaidString(record?.totalExpense, record?.totalPaid)}{" "} */}
+                 </Text>
+              {Object.keys(groupExpense[user] || {}).map((friend) => {
+                                 {console.log(user,"groupExpense user",friend)}
+
+                   return (user || "").toLowerCase() != (friend || "").toLowerCase() && <Text>
+                   {friend || `User ${ 1}`}{" "}{groupExpense[user][friend] || 0}
+                   {/* {payOrPaidString(record?.totalExpense, record?.totalPaid)}{" "} */}
+                 </Text>
+              })}
+             
+              {/* <Text>Rs Paid: {record?.totalPaid || 0}</Text>
+              <Text>Expense: {record?.totalExpense || 0}</Text> */}
             </View>
-          )}
-          keyExtractor={(item) => item.name}
-        />
-      </Card>
-      <Card>
-        <Card.Title>Transactions</Card.Title>
-        <Card.Divider />
-        <Button onPress={handleTransaction}>Add New </Button>
-        <View>
+          ))}
+        </Card>
+       
+        <Card>
+          <Card.Title style={{ alignContent: "space-between" }}>
+            <Text style={{ flex: 4 }}>{group.name}</Text>
+          </Card.Title>
+          <Card.Divider />
+          <Text>Total Transaction Amount: {groupRecord?.totalSpend || 0}</Text>
+          {groupRecord?.users?.map((record) => (
+            <View>
+              <Text>
+                {record?.name || `User ${i + 1}`}{" "}
+                {payOrPaidString(record?.totalExpense, record?.totalPaid)}{" "}
+              </Text>
+              <Text>Rs Paid: {record?.totalPaid || 0}</Text>
+              <Text>Expense: {record?.totalExpense || 0}</Text>
+            </View>
+          ))}
+        </Card>
+
+        <Card>
+          <View style={{flex:1,flexDirection:"row"}}>
+            <View style={{flex:1}}>
+
+              <Text >Users</Text>
+            </View>
+            <View style={{flex:2}}>
+              <Button onPress={handleAddNewUser} style={tw`justify-self-end`}> Add New
+              </Button>
+            </View>
+
+
+          </View>
+          <Card.Divider />
           <FlatList
-            data={groupTransaction}
+            data={groupUser}
             renderItem={({ item }) => (
-              <View key={item?.id} style={[styles.container, styles.row]}>
+              <View style={[styles.container, styles.row]}>
                 <View style={{ flex: 3 }}>
-                  <Text>{item.remarks || ""}</Text>
+                  <Text>{item.name}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text>{item.amount || 0}</Text>
                 </View>
               </View>
             )}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.name}
           />
-        </View>
-      </Card>
-      {modal && (
-        <Dialog
-          isVisible={modal}
-          onBackdropPress={() => {
-            setModal((prev) => !prev);
-          }}
-        >
-          <Dialog.Title title="Add User to Group" />
-          <Text>Name</Text>
-          <Input
-            placeholder="ex. Abhishek "
-            errorStyle={{ color: "red" }}
-            errorMessage={false && "ENTER A VALID ERROR HERE"}
-            onChangeText={setInputName}
-          />
-          <View>
-            <Button onPress={handleAddUserToGroup}>Add To Group</Button>
-          </View>
-        </Dialog>
-      )}
-      {modalTransaction && (
-        <Dialog
-          isVisible={modalTransaction}
-          onBackdropPress={() => {
-            setModalTransaction((prev) => !prev);
-          }}
-        >
-          <Dialog.Title title="Add New Transaction" />
+        </Card>
+        <Card>
+          <View style={{ flex: 1, flexDirection: "row" }}>
 
+            <View style={{ flex: 1 }}>
+              <Text>Transaction</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button onPress={handleTransaction}>Add New </Button>
+            </View>
+
+            <Card.Divider />
+          </View>
+          
           <View>
-            <Text>Amount</Text>
+            <FlatList
+              data={groupTransaction}
+              renderItem={({ item }) => (
+                <View key={item?.id} style={[styles.container, styles.row]}>
+                  <View style={{ flex: 3 }}>
+                    <Text>{item.remarks || ""}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text>{item.amount || 0}</Text>
+                  </View>
+                </View>
+              )}
+              keyExtractor={(item) => item.id}
+            />
+          </View>
+        </Card>
+        {modal && (
+          <Dialog
+            isVisible={modal}
+            onBackdropPress={() => {
+              setModal((prev) => !prev);
+            }}
+          >
+            <Dialog.Title title="Add User to Group" />
+            <Text>Name</Text>
             <Input
-              placeholder="00.00"
+              placeholder="ex. Abhishek "
               errorStyle={{ color: "red" }}
               errorMessage={false && "ENTER A VALID ERROR HERE"}
-              keyboardType="numeric"
-              onChangeText={setAmount}
+              onChangeText={setInputName}
             />
-            <Text>Remarks</Text>
-            <Input
-              placeholder="Remarks about transaction"
-              errorStyle={{ color: "red" }}
-              errorMessage={false && "ENTER A VALID ERROR HERE"}
-              onChangeText={setRemarks}
-            />
+            <View>
+              <Button onPress={handleAddUserToGroup}>Add To Group</Button>
+            </View>
+          </Dialog>
+        )}
+        {modalTransaction && (
+          <Dialog
+            isVisible={modalTransaction}
+            onBackdropPress={() => {
+              setModalTransaction((prev) => !prev);
+            }}
+          >
+            <Dialog.Title title="Add New Transaction" />
 
-            <Text>Paid By</Text>
-            <SelectDropdown
-              data={convertToSelectData(groupUser)}
-              onSelect={(selectedItem, index) => {
-                console.log(selectedItem, index);
-                setPaidBy(selectedItem);
-              }}
-              buttonTextAfterSelection={(selectedItem, index) => {
-                // text represented after item is selected
-                // if data array is an array of objects then return selectedItem.property to render after item is selected
-                return selectedItem;
-              }}
-              rowTextForSelection={(item, index) => {
-                // text represented for each item in dropdown
-                // if data array is an array of objects then return item.property to represent item in dropdown
+            <View>
+              <Text>Amount</Text>
+              <Input
+                placeholder="00.00"
+                errorStyle={{ color: "red" }}
+                errorMessage={false && "ENTER A VALID ERROR HERE"}
+                keyboardType="numeric"
+                onChangeText={setAmount}
+              />
+              <Text>Remarks</Text>
+              <Input
+                placeholder="Remarks about transaction"
+                errorStyle={{ color: "red" }}
+                errorMessage={false && "ENTER A VALID ERROR HERE"}
+                onChangeText={setRemarks}
+              />
 
-                return item;
-              }}
-            />
-            <Text>Transaction Date</Text>
-            <TouchableOpacity onPress={handleDatePicker}>
-              <Text>
-                {date.getDate()}/{date.getMonth() + 1}/{date.getFullYear()}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={{ maxHeight: 216 }}>
-            <CheckBoxStack
-              onChange={setTransactionUser}
-              options={convertToCheckboxData(groupUser)}
-            />
-          </ScrollView>
-          <View>
-            <Button onPress={handleNewTransaction}>Create</Button>
-          </View>
-        </Dialog>
-      )}
-      {showDateTimePicker && (
-        <DateTimePicker value={date} onChange={handleDateChange} />
-      )}
-    </View>
-    // </ScrollView>
+              <Text>Paid By</Text>
+              <SelectDropdown
+                data={convertToSelectData(groupUser)}
+                onSelect={(selectedItem, index) => {
+                  console.log(selectedItem, index);
+                  setPaidBy(selectedItem);
+                }}
+                buttonTextAfterSelection={(selectedItem, index) => {
+                  // text represented after item is selected
+                  // if data array is an array of objects then return selectedItem.property to render after item is selected
+                  return selectedItem;
+                }}
+                rowTextForSelection={(item, index) => {
+                  // text represented for each item in dropdown
+                  // if data array is an array of objects then return item.property to represent item in dropdown
+
+                  return item;
+                }}
+              />
+              <Text>Transaction Date</Text>
+              <TouchableOpacity onPress={handleDatePicker}>
+                <Text>
+                  {date.getDate()}/{date.getMonth() + 1}/{date.getFullYear()}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 216 }}>
+              <CheckBoxStack
+                onChange={setTransactionUser}
+                options={convertToCheckboxData(groupUser)}
+              />
+            </ScrollView>
+            <View>
+              <Button onPress={handleNewTransaction}>Create</Button>
+            </View>
+          </Dialog>
+        )}
+        {showDateTimePicker && (
+          <DateTimePicker value={date} onChange={handleDateChange} />
+        )}
+      </View>
+    </ScrollView>
   );
 };
 
